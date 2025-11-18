@@ -1,0 +1,1397 @@
+src\router\index.js:
+<code>
+import { createRouter, createWebHistory } from 'vue-router';
+import Home from '../view/Home.vue';
+import Register from '../view/Register.vue';
+import Login from '../view/Login.vue';
+
+
+const routes = [
+    {
+        path: '/',
+        name: 'Home',
+        component: Home
+    },
+    {
+        path: '/Register',
+        name: 'Register',
+        component: Register
+    },
+    {
+        path: '/login',
+        name: 'Login',
+        component: Login
+    },
+    {
+        path: '/forgot-password',
+        name: 'ForgotPassword',
+        component: () => import('../view/ForgotPassword.vue')
+    },
+    {
+        path: '/reset-password',
+        name: 'ResetPassword',
+        component: () => import('../view/ResetPassword.vue')
+    },
+    {
+        path: '/message',
+        name: 'Message',
+        component: () => import('../view/Message.vue')
+    },
+    {
+        path: '/friends',
+        name: 'Friends',
+        component: () => import('../view/Friends.vue'),
+        beforeEnter: (to, from, next) => {
+            // This is a simple route guard. It checks for the auth token.
+            if (localStorage.getItem('authToken')) {
+                next(); // User is authenticated, proceed.
+            } else {
+                next('/login'); // User is not authenticated, redirect to login.
+            }
+        }
+    }
+]
+
+const router = createRouter({
+    history: createWebHistory(),
+    routes,
+});
+
+export default router;
+</code>
+
+src\utils\api.js:
+<code>
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8080/api';
+
+// Create a reusable Axios instance with a base URL
+const apiClient = axios.create({
+  baseURL: API_BASE_URL
+});
+
+// Add a request interceptor to attach the JWT token to every request
+apiClient.interceptors.request.use(
+  config => {
+    // Get the token from localStorage
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      // If the token exists, add it to the Authorization header
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
+
+// A helper function for consistent error handling
+const handleApiError = (error) => {
+    throw error.response ? error.response.data : error.message;
+};
+
+export function registerUser(userData) {
+  return apiClient.post('/register', userData)
+    .then(response => response.data)
+    .catch(handleApiError);
+}
+
+export function loginUser(credentials) {
+  return apiClient.post('/login', credentials)
+    .then(response => response.data)
+    .catch(handleApiError);
+}
+
+export function logoutUser() {
+  // Remove the token from storage
+  localStorage.removeItem('authToken');
+  // Update the global state to logged out
+  setAuthState(false);
+}
+
+export function forgotPassword(email) {
+  return apiClient.post(`/forgot-password?email=${encodeURIComponent(email)}`)
+    .then(response => response.data)
+    .catch(handleApiError);
+}
+
+export function resetPassword(token, newPassword) {
+  return apiClient.post('/reset-password', { token, newPassword })
+    .then(response => response.data)
+    .catch(handleApiError);
+}
+
+export function getFriendRequests(status) {
+  return apiClient.get(`/friends/requests?status=${status}`)
+    .then(res => res.data)
+    .catch(handleApiError);
+}
+
+export function sendFriendRequest(receiverName, receiverTag) {
+  return apiClient.post('/friends/request', { receiverName, receiverTag })
+    .then(res => res.data)
+    .catch(handleApiError);
+}
+
+export function respondToFriendRequest(requestId, action) {
+  return apiClient.post('/friends/requests/respond', { requestId, action })
+    .then(res => res.data)
+    .catch(handleApiError);
+}
+
+export function getFriends() {
+  // This function calls the new endpoint you created in the controller
+  return apiClient.get('/friends/friend-list')
+    .then(res => res.data)
+    .catch(handleApiError);
+}
+</code>
+
+src\utils\auth.js:
+<code>
+// src/utils/auth.js
+
+import { reactive } from 'vue';
+
+// Create a reactive state object to hold authentication status and user info
+export const authState = reactive({
+  isAuthenticated: !!localStorage.getItem('authToken'),
+  user: null // We can store user details here later if needed
+});
+
+export function setAuthState(isLoggedIn) {
+  authState.isAuthenticated = isLoggedIn;
+  if (!isLoggedIn) {
+    authState.user = null;
+  }
+}
+</code>
+
+src\utils\main.css:
+<code>
+/* Discord Global Styles */
+
+/* App-wide font family */
+body, #app {
+  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #36393f;
+}
+
+/* --- REUSABLE PAGE LAYOUT --- */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 53px); /* Full height minus header */
+  color: #dcddde;
+  background: #36393f;
+}
+
+.page-header {
+  background: #2f3136;
+  padding: 0 20px;
+  border-bottom: 1px solid #202225;
+  flex-shrink: 0;
+}
+
+.page-content {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* --- REUSABLE FORM ELEMENTS --- */
+
+/* Generic Input */
+.discord-input {
+  padding: 10px;
+  border: none;
+  border-radius: 3px;
+  font-size: 16px;
+  background: #202225;
+  color: #dcddde;
+  transition: all 0.15s ease;
+  outline: none;
+  font-family: inherit;
+  line-height: 20px;
+}
+.discord-input:focus {
+  border: 1px solid #00aff4;
+}
+
+/* Generic Button */
+.discord-button {
+  background: #5865f2;
+  color: #ffffff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.17s ease;
+  font-family: inherit;
+  line-height: 16px;
+  min-height: 44px;
+}
+.discord-button:hover {
+  background: #4752c4;
+}
+.discord-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- REUSABLE STATE MESSAGES --- */
+.error-message {
+  color: #ed4245;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
+}
+.success-message {
+  color: #57f287;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* Discord Navigation Styles */
+.discord-header {
+  background: #2f3136;
+  border-bottom: 1px solid #202225;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
+}
+
+.discord-nav {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.nav-link {
+  color: #b9bbbe;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 16px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: all 0.17s ease;
+  position: relative;
+  line-height: 20px;
+}
+
+.nav-link:hover {
+  color: #dcddde;
+  background: rgba(79, 84, 92, 0.16);
+}
+
+.nav-link.router-link-exact-active {
+  color: #ffffff;
+  background: #5865f2;
+}
+
+.nav-link.router-link-exact-active:hover {
+  background: #4752c4;
+  color: #ffffff;
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid #00aff4;
+  outline-offset: 2px;
+}
+
+/* Auth Container Styles */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #5865f2;
+  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  padding: 20px;
+}
+
+.auth-container h1 {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-align: center;
+  letter-spacing: -0.025em;
+}
+
+.auth-container .subtitle {
+  color: #b9bbbe;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 20px;
+}
+
+/* Card Styles */
+.auth-card {
+  background: #36393f;
+  border-radius: 8px;
+  padding: 32px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+}
+
+/* Form Styles */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-label {
+  font-weight: 600;
+  color: #b9bbbe;
+  font-size: 12px;
+  line-height: 16px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.auth-input {
+  padding: 10px;
+  border: none;
+  border-radius: 3px;
+  font-size: 16px;
+  background: #202225;
+  color: #dcddde;
+  transition: all 0.15s ease;
+  outline: none;
+  font-family: inherit;
+  line-height: 20px;
+}
+
+.auth-input:focus {
+  background: #202225;
+  border: 1px solid #00aff4;
+}
+
+.auth-input:hover {
+  background: #2c2f33;
+}
+
+.auth-input::placeholder {
+  color: #72767d;
+}
+
+/* Button Styles */
+.auth-button {
+  background: #5865f2;
+  color: #ffffff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.17s ease;
+  margin-top: 8px;
+  font-family: inherit;
+  line-height: 16px;
+  min-height: 44px;
+}
+
+.auth-button:hover {
+  background: #4752c4;
+}
+
+.auth-button:active {
+  background: #3c45a5;
+}
+
+.auth-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Link Styles */
+.auth-link {
+  margin-top: 4px;
+}
+
+.auth-link span {
+  color: #72767d;
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.auth-link a {
+  color: #00aff4;
+  text-decoration: none;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
+.forgot-password {
+  margin-top: -8px;
+  margin-bottom: 8px;
+}
+
+.forgot-password a {
+  color: #00aff4;
+  font-size: 14px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.forgot-password a:hover {
+  text-decoration: underline;
+}
+
+/* State Styles */
+.auth-input.error {
+  border: 1px solid #ed4245;
+}
+
+.auth-input.success {
+  border: 1px solid #57f287;
+}
+
+.error-message {
+  color: #ed4245;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* Focus Accessibility */
+.auth-input:focus-visible,
+.auth-button:focus-visible {
+  outline: 2px solid #00aff4;
+  outline-offset: 2px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 16px;
+  }
+  
+  .auth-card {
+    padding: 24px 16px;
+    margin: 0;
+  }
+
+  .auth-container h1 {
+    font-size: 20px;
+  }
+
+  .auth-container .subtitle {
+    font-size: 14px;
+  }
+
+  .auth-input, 
+  .auth-button {
+    font-size: 16px;
+  }
+}
+
+/* Loading Animation */
+.auth-button.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.auth-button.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  border: 2px solid transparent;
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: discord-spin 1s linear infinite;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+@keyframes discord-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</code>
+
+src\view\ForgotPassword.vue:
+<code>
+<template>
+    <div class="auth-container">
+        <h1>Forgot your password?</h1>
+        <p class="subtitle">Enter your email and we'll send you a reset link.</p>
+        <div class="auth-card">
+            <form @submit.prevent="submitForm" class="auth-form">
+                <div class="auth-input-group">
+                    <label for="email" class="auth-label">EMAIL</label>
+                    <input type="email" id="email" v-model="email" required class="auth-input" />
+                </div>
+
+                <button type="submit" class="auth-button">Send Reset Link</button>
+                
+                <div class="auth-link">
+                    <span>Remembered your password? <a href="#" @click.prevent="$router.push('/login')">Log in</a></span>
+                </div>
+            </form>
+        </div>
+    </div>
+</template>
+
+<script>
+import { forgotPassword } from '@/utils/api'
+
+export default {
+    name: 'ForgotPassword',
+    data() {
+        return {
+            email: ''
+        }
+    },
+    methods: {
+        async submitForm() {
+            try {
+                const response = await forgotPassword(this.email)
+                console.log('Password reset link sent:', response)
+                // You can add success message handling here
+            } catch (error) {
+                console.error('Error submitting form:', error)
+                // You can add error message handling here
+            }
+        }
+    }
+}
+</script>
+
+<style scoped>
+/* Component-specific styles only - global styles are in global.css */
+</style>
+</code>
+
+src\view\Friends.vue:
+<code>
+<template>
+  <div class="page-container">
+    <div class="page-header">
+      <nav class="friends-nav">
+        <a href="#" @click.prevent="activeTab = 'all'" :class="{ 'active': activeTab === 'all' }">All Friends</a>
+        <a href="#" @click.prevent="activeTab = 'pending'" :class="{ 'active': activeTab === 'pending' }">Pending</a>
+      </nav>
+    </div>
+
+    <div class="page-content">
+      <div class="add-friend-section">
+        <h2>ADD FRIEND</h2>
+        <p>You can add a friend with their username and tag.</p>
+        <form @submit.prevent="handleAddFriend" class="add-friend-form">
+          <div class="input-wrapper">
+            <input type="text" v-model="addFriendInput" placeholder="Enter a Username#0000" class="discord-input" />
+            <button type="submit" class="discord-button" :disabled="isSending">
+              {{ isSending ? 'Sending...' : 'Send Friend Request' }}
+            </button>
+          </div>
+        </form>
+        <p v-if="requestStatusMessage" :class="isError ? 'error-message' : 'success-message'">
+          {{ requestStatusMessage }}
+        </p>
+      </div>
+
+      <div class="friends-list-section">
+        <h2 class="list-title">{{ activeTab === 'pending' ? `PENDING — ${pendingRequests.length}` : `ALL FRIENDS —
+          ${allFriends.length}` }}</h2>
+
+        <ul v-if="activeTab === 'pending'" class="friends-list">
+          <li v-for="request in pendingRequests" :key="request.requestId" class="friend-item">
+            <div class="user-info">
+              <span class="username">{{ request.requesterName }}</span>
+              <span class="usertag">#{{ request.requesterTag }}</span>
+              <span class="status-text">Incoming Friend Request</span>
+            </div>
+            <div class="action-buttons">
+              <button class="icon-button accept" @click="handleResponse(request.requestId, 'ACCEPTED')">✓</button>
+              <button class="icon-button decline" @click="handleResponse(request.requestId, 'REJECTED')">✕</button>
+            </div>
+          </li>
+          <li v-if="!pendingRequests.length" class="empty-state">No pending friend requests.</li>
+        </ul>
+
+        <ul v-if="activeTab === 'all'" class="friends-list">
+          <li v-for="friend in allFriends" :key="friend.id" class="friend-item">
+            <div class="user-info">
+              <span class="username">{{ friend.name }}</span>
+              <span class="usertag">#{{ friend.tag }}</span>
+            </div>
+          </li>
+          <li v-if="!allFriends.length" class="empty-state">You don't have any friends yet. Wumpus is sad.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { getFriendRequests, sendFriendRequest, respondToFriendRequest, getFriends } from '@/utils/api';
+
+export default {
+  name: 'Friends',
+  data() {
+    return {
+      activeTab: 'all',
+      addFriendInput: '',
+      isSending: false,
+      requestStatusMessage: '',
+      isError: false,
+      pendingRequests: [],
+      allFriends: [],
+    };
+  },
+  async mounted() {
+    // Fetch initial data when the component is loaded
+    this.fetchAllData();
+  },
+  methods: {
+    // Fetches both lists
+    async fetchAllData() {
+      this.fetchPendingRequests();
+      this.fetchAllFriends();
+    },
+
+    // Fetches pending friend requests
+    async fetchPendingRequests() {
+      try {
+        this.pendingRequests = await getFriendRequests('PENDING');
+      } catch (error) {
+        console.error('Failed to fetch pending requests:', error);
+      }
+    },
+
+    // Fetches the list of accepted friends
+    async fetchAllFriends() {
+      try {
+        this.allFriends = await getFriends();
+      } catch (error) {
+        console.error('Failed to fetch friends list:', error);
+      }
+    },
+
+    // Handles the submission of the "add friend" form
+    async handleAddFriend() {
+      if (!this.addFriendInput.includes('#')) {
+        this.isError = true;
+        this.requestStatusMessage = 'Please enter a valid username and tag (e.g., Wumpus#1234).';
+        return;
+      }
+
+      const [receiverName, receiverTag] = this.addFriendInput.split('#');
+
+      if (!receiverName || !receiverTag || isNaN(parseInt(receiverTag))) {
+        this.isError = true;
+        this.requestStatusMessage = 'The format is incorrect. Please use Username#Tag.';
+        return;
+      }
+
+      this.isSending = true;
+      this.isError = false;
+      this.requestStatusMessage = '';
+
+      try {
+        const response = await sendFriendRequest(receiverName, receiverTag);
+        this.isError = false;
+        this.requestStatusMessage = response || 'Friend request sent successfully!';
+        this.addFriendInput = ''; // Clear input on success
+      } catch (error) {
+        this.isError = true;
+        this.requestStatusMessage = error.message || 'Failed to send friend request. Please try again.';
+      } finally {
+        this.isSending = false;
+      }
+    },
+
+    // Handles accepting or rejecting a friend request
+    async handleResponse(requestId, action) {
+      try {
+        await respondToFriendRequest(requestId, action);
+        // Refresh both lists to show the updated state
+        this.fetchAllData();
+      } catch (error) {
+        console.error(`Failed to ${action.toLowerCase()} request:`, error);
+        alert('There was an error responding to the request.');
+      }
+    }
+  }
+};
+</script>
+
+<style scoped>
+/* NOW, styles are only for things UNIQUE to the Friends page */
+.friends-nav {
+  display: flex;
+  gap: 16px;
+}
+
+.friends-nav a {
+  padding: 16px 0;
+  font-weight: 600;
+  color: #b9bbbe;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.17s ease;
+}
+
+.friends-nav a:hover {
+  color: #ffffff;
+}
+
+.friends-nav a.active {
+  color: #ffffff;
+  border-bottom-color: #5865f2;
+}
+
+.add-friend-section {
+  padding-bottom: 20px;
+  border-bottom: 1px solid #42454a;
+}
+
+.add-friend-section h2 {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+.add-friend-section p {
+  font-size: 14px;
+  color: #b9bbbe;
+  margin-bottom: 20px;
+}
+
+.add-friend-form .input-wrapper {
+  display: flex;
+  gap: 10px;
+}
+
+.input-wrapper .discord-input {
+  /* Minor tweak for this specific layout */
+  flex-grow: 1;
+}
+
+.input-wrapper .discord-button {
+  /* Minor tweak for this specific layout */
+  white-space: nowrap;
+}
+
+.friends-list-section {
+  padding-top: 20px;
+}
+
+.list-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #b9bbbe;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #42454a;
+  margin-bottom: 10px;
+}
+
+.friends-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px;
+  border-radius: 4px;
+  transition: background-color 0.1s ease;
+}
+
+.friend-item:hover {
+  background: #40444b;
+}
+
+.user-info {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.username {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.usertag {
+  font-size: 12px;
+  color: #b9bbbe;
+}
+
+.status-text {
+  margin-left: 12px;
+  font-size: 14px;
+  color: #b9bbbe;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.17s ease;
+}
+
+.icon-button.accept {
+  background: #3ba55d;
+  color: #ffffff;
+}
+
+.icon-button.accept:hover {
+  background: #2d7d46;
+}
+
+.icon-button.decline {
+  background: #ed4245;
+  color: #ffffff;
+}
+
+.icon-button.decline:hover {
+  background: #c03639;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #72767d;
+}
+</style>
+</code>
+
+src\view\Home.vue:
+<code>
+<template>
+    <div class="home-container">
+        <h1>Welcome to the Home Page</h1>
+        <p>This is the home page of your application.</p>
+        <router-link to="/register">Go to Register</router-link>
+    </div>
+</template>
+</code>
+
+src\view\Login.vue:
+<code>
+<template>
+  <div class="auth-container">
+    <h1>Welcome back!</h1>
+    <p class="subtitle">We're so excited to see you again!</p>
+    <div class="auth-card">
+      <form @submit.prevent="handleSubmit" class="auth-form">
+
+        <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+
+        <div class="auth-input-group">
+          <label for="email" class="auth-label">EMAIL</label>
+          <input type="email" id="email" v-model="email" required class="auth-input" />
+        </div>
+
+        <div class="auth-input-group">
+          <label for="password" class="auth-label">PASSWORD</label>
+          <input type="password" id="password" v-model="password" required class="auth-input" />
+        </div>
+
+        <div class="forgot-password">
+          <a href="#" @click.prevent="$router.push('/forgot-password')">Forgot your password?</a>
+        </div>
+
+        <button type="submit" class="auth-button">Log In</button>
+
+        <div class="auth-link">
+          <span>Need an account? <a href="#" @click.prevent="$router.push('/register')">Register</a></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script>
+import { loginUser } from '@/utils/api';
+import { setAuthState } from '@/utils/auth';
+
+export default {
+  name: 'Login',
+  data() {
+    return {
+      email: '',
+      password: '',
+      errorMessage: '' // Add a data property for error messages
+    };
+  },
+  methods: {
+    async handleSubmit() {
+      this.errorMessage = ''; // Clear previous errors
+      try {
+        const response = await loginUser({ email: this.email, password: this.password });
+        localStorage.setItem('authToken', response.token);
+        console.log('Login successful, token stored.');
+        setAuthState(true);
+        this.$router.push('/friends');
+      } catch (error) {
+        console.error('Login failed:', error);
+        // Display the specific error message from the backend
+        this.errorMessage = error.message || 'Invalid email or password. Please try again.';
+      }
+    }
+  }
+};
+</script>
+
+<style scoped>
+/* Your component-specific styles here */
+</style>
+</code>
+
+src\view\Message.vue:
+<code>
+<template>
+  <div>
+    <h2>Vue WebSocket Chat Test</h2>
+    <input v-model="username" placeholder="Enter username" />
+    <button @click="connect">Connect</button>
+
+    <div v-if="connected">
+      <input v-model="message" placeholder="Type message..." @keyup.enter="sendMessage" />
+      <button @click="sendMessage">Send</button>
+
+      <ul>
+        <li v-for="(msg, index) in messages" :key="index">
+          {{ msg.sender }}: {{ msg.content }}
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>
+
+<script>
+import SockJS from "sockjs-client";
+import Stomp from "stompjs";
+
+export default {
+  name: "Message",
+  data() {
+    return {
+      username: "",
+      message: "",
+      messages: [],
+      connected: false,
+      stompClient: null,
+    };
+  },
+  methods: {
+    connect() {
+      const socket = new SockJS("http://localhost:8080/ws");
+      this.stompClient = Stomp.over(socket);
+
+      this.stompClient.connect({}, () => {
+        this.connected = true;
+        this.stompClient.subscribe("/topic/public", (msg) => {
+          const body = JSON.parse(msg.body);
+          this.messages.push(body);
+        });
+
+        this.stompClient.send(
+          "/app/chat.addUser",
+          {},
+          JSON.stringify({ sender: this.username, eventType: "JOIN" })
+        );
+      });
+    },
+    sendMessage() {
+      if (this.message.trim() && this.stompClient) {
+        this.stompClient.send(
+          "/app/chat.sendMessage",
+          {},
+          JSON.stringify({ sender: this.username, content: this.message, eventType: "CHAT" })
+        );
+        this.message = "";
+      }
+    },
+  },
+};
+</script>
+
+</code>
+
+src\view\Register.vue:
+<code>
+<template>
+  <div class="auth-container">
+    <h1>Create an account</h1>
+    <div class="auth-card">
+      <form @submit.prevent="handleSubmit" class="auth-form">
+        <div class="auth-input-group">
+          <label for="username" class="auth-label">USERNAME</label>
+          <input type="text" id="username" v-model="username" required class="auth-input" />
+        </div>
+
+        <div class="auth-input-group">
+          <label for="email" class="auth-label">EMAIL</label>
+          <input type="email" id="email" v-model="email" required class="auth-input" />
+        </div>
+        <div class="auth-input-group">
+          <label for="password" class="auth-label">PASSWORD</label>
+          <input type="password" id="password" v-model="password" required class="auth-input" />
+        </div>
+
+        <div class="auth-input-group">
+          <label for="confirmPassword" class="auth-label">CONFIRM PASSWORD</label>
+          <input type="password" id="confirmPassword" v-model="confirmPassword" required class="auth-input" />
+        </div>
+
+        <button type="submit" class="auth-button">Continue</button>
+        
+        <div class="auth-link">
+          <span>Already have an account? <a href="#" @click.prevent="$router.push('/login')">Log in</a></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script>
+import { registerUser } from '@/utils/api'; // Adjust the import path as necessary
+
+export default {
+    name: 'Register',
+    data() {
+        return {
+            username: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+        };
+    },
+    methods: {
+        async handleSubmit() {
+            if (this.password !== this.confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            try {
+                const response = await registerUser({
+                    username: this.username,
+                    email: this.email,
+                    password: this.password,
+                });
+                alert('Register email sent');
+                console.log(response);
+            } catch (error) {
+                console.error('Registration failed:', error);
+                alert('Registration failed. Please try again.');
+            }
+        },
+    },
+};
+</script>
+
+<style scoped>
+/* Component-specific styles only - global styles are in global.css */
+</style>
+</code>
+
+src\view\ResetPassword.vue:
+<code>
+<template>
+    <div class="auth-container">
+        <h1>Reset your password</h1>
+        <p class="subtitle">Enter your new password below.</p>
+        <div class="auth-card">
+            <!-- Show error if no token found -->
+            <div v-if="!token" class="error-message">
+                Invalid or missing reset token. Please check your email link.
+            </div>
+            
+            <!-- Show form only if token exists -->
+            <form v-else @submit.prevent="handleSubmit" class="auth-form">
+                <div class="auth-input-group">
+                    <label for="newPassword" class="auth-label">NEW PASSWORD</label>
+                    <input type="password" id="newPassword" v-model="newPassword" required class="auth-input" />
+                </div>
+
+                <div class="auth-input-group">
+                    <label for="confirmPassword" class="auth-label">CONFIRM NEW PASSWORD</label>
+                    <input type="password" id="confirmPassword" v-model="confirmPassword" required class="auth-input" />
+                </div>
+
+                <button type="submit" class="auth-button" :disabled="isLoading">
+                    {{ isLoading ? 'Resetting...' : 'Reset Password' }}
+                </button>
+                
+                <div class="auth-link">
+                    <span>Remember your password? <a href="#" @click.prevent="$router.push('/login')">Log in</a></span>
+                </div>
+            </form>
+        </div>
+    </div>
+</template>
+
+<script>
+import { resetPassword } from '@/utils/api'
+
+export default {
+    name: 'ResetPassword',
+    data() {
+        return {
+            token: '',
+            newPassword: '',
+            confirmPassword: '',
+            isLoading: false
+        }
+    },
+    mounted() {
+        // Extract token from URL query parameters when component mounts
+        this.token = this.$route.query.token || '';
+        
+        // If no token in query, check if it's in the path
+        if (!this.token) {
+            // For URLs like /reset-password/token-here
+            this.token = this.$route.params.token || '';
+        }
+        
+        console.log('Token extracted from URL:', this.token);
+    },
+    methods: {
+        async handleSubmit() {
+            if (this.newPassword !== this.confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            if (this.newPassword.length < 6) {
+                alert('Password must be at least 6 characters long!');
+                return;
+            }
+
+            this.isLoading = true;
+
+            try {
+                const response = await resetPassword(this.token, this.newPassword);
+                console.log('Password reset successful:', response);
+                
+                alert('Password reset successfully! You will be redirected to login.');
+                this.$router.push('/login');
+            } catch (error) {
+                console.error('Error resetting password:', error);
+                alert('Failed to reset password. Please try again or request a new reset link.');
+            } finally {
+                this.isLoading = false;
+            }
+        }
+    }
+}
+</script>
+
+<style scoped>
+/* Component-specific styles only - global styles are in global.css */
+</style>
+</code>
+
+src\App.vue:
+<code>
+<template>
+  <div id="app">
+    <header class="discord-header">
+      <nav class="discord-nav">
+        <router-link to="/" class="nav-link">Home</router-link>
+        <router-link to="/message" class="nav-link">Messages</router-link>
+
+        <router-link v-if="auth.isAuthenticated" to="/friends" class="nav-link">Friends</router-link>
+
+        <div v-if="!auth.isAuthenticated" class="nav-auth-links">
+          <router-link to="/login" class="nav-link">Login</router-link>
+          <router-link to="/register" class="nav-link">Register</router-link>
+        </div>
+
+        <div v-else class="user-dropdown">
+          <button @click="toggleDropdown" class="username-button">
+            My Account </button>
+          <div v-if="isDropdownOpen" class="dropdown-menu">
+            <a href="#" @click.prevent="handleLogout" class="dropdown-item">Logout</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <router-view />
+    </main>
+  </div>
+</template>
+
+<script>
+import { authState } from '@/utils/auth';
+import { logoutUser } from '@/utils/api';
+import { useRouter } from 'vue-router';
+
+export default {
+  setup() {
+    const router = useRouter();
+
+    const handleLogout = () => {
+      logoutUser();
+      // Refresh the page and redirect to the login page
+      window.location.href = '/login';
+    };
+
+    return {
+      auth: authState, // Expose the auth state to the template
+      handleLogout
+    };
+  },
+  data() {
+    return {
+      isDropdownOpen: false
+    };
+  },
+  methods: {
+    toggleDropdown() {
+      this.isDropdownOpen = !this.isDropdownOpen;
+    }
+  }
+};
+</script>
+
+<style>
+/* Add these styles to handle the new elements */
+.nav-auth-links {
+  display: flex;
+  gap: 24px;
+}
+.user-dropdown {
+  position: relative;
+  margin-left: auto; /* Pushes the dropdown to the right */
+}
+.username-button {
+  background: none;
+  border: none;
+  color: #b9bbbe;
+  font-weight: 500;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 4px;
+}
+.username-button:hover {
+  color: #ffffff;
+  background: rgba(79, 84, 92, 0.16);
+}
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #2f3136;
+  border: 1px solid #202225;
+  border-radius: 4px;
+  padding: 8px;
+  min-width: 150px;
+  z-index: 1001;
+}
+.dropdown-item {
+  display: block;
+  padding: 8px 12px;
+  color: #b9bbbe;
+  text-decoration: none;
+  border-radius: 3px;
+}
+.dropdown-item:hover {
+  background-color: #5865f2;
+  color: #ffffff;
+}
+</style>
+</code>
+
+src\main.js:
+<code>
+import { createApp } from 'vue'
+import App from './App.vue'
+import router from './router'
+import './utils/main.css'
+
+const app = createApp(App);
+
+app.use(router);
+
+app.mount('#app');
+
+
+</code>
+
+package.json:
+<code>
+{
+  "name": "chatweb-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "sockjs-client": "^1.6.1",
+    "stompjs": "^2.3.3",
+    "vue": "^3.5.18",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.0.6",
+    "vite-plugin-vue-devtools": "^8.0.0"
+  }
+}
+
+</code>
+

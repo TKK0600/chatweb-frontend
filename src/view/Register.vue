@@ -12,7 +12,6 @@
           <label for="email" class="auth-label">EMAIL</label>
           <input type="email" id="email" v-model="email" required class="auth-input" />
         </div>
-
         <div class="auth-input-group">
           <label for="password" class="auth-label">PASSWORD</label>
           <input type="password" id="password" v-model="password" required class="auth-input" />

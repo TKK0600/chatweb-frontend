@@ -34,6 +34,19 @@ const routes = [
         path: '/message',
         name: 'Message',
         component: () => import('../view/Message.vue')
+    },
+    {
+        path: '/friends',
+        name: 'Friends',
+        component: () => import('../view/Friends.vue'),
+        beforeEnter: (to, from, next) => {
+            // This is a simple route guard. It checks for the auth token.
+            if (localStorage.getItem('authToken')) {
+                next(); // User is authenticated, proceed.
+            } else {
+                next('/login'); // User is not authenticated, redirect to login.
+            }
+        }
     }
 ]
 

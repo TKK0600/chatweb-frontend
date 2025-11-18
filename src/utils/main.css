@@ -5,6 +5,84 @@ body, #app {
   font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
+  background-color: #36393f;
+}
+
+/* --- REUSABLE PAGE LAYOUT --- */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 53px); /* Full height minus header */
+  color: #dcddde;
+  background: #36393f;
+}
+
+.page-header {
+  background: #2f3136;
+  padding: 0 20px;
+  border-bottom: 1px solid #202225;
+  flex-shrink: 0;
+}
+
+.page-content {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* --- REUSABLE FORM ELEMENTS --- */
+
+/* Generic Input */
+.discord-input {
+  padding: 10px;
+  border: none;
+  border-radius: 3px;
+  font-size: 16px;
+  background: #202225;
+  color: #dcddde;
+  transition: all 0.15s ease;
+  outline: none;
+  font-family: inherit;
+  line-height: 20px;
+}
+.discord-input:focus {
+  border: 1px solid #00aff4;
+}
+
+/* Generic Button */
+.discord-button {
+  background: #5865f2;
+  color: #ffffff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.17s ease;
+  font-family: inherit;
+  line-height: 16px;
+  min-height: 44px;
+}
+.discord-button:hover {
+  background: #4752c4;
+}
+.discord-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- REUSABLE STATE MESSAGES --- */
+.error-message {
+  color: #ed4245;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
+}
+.success-message {
+  color: #57f287;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
 }
 
 /* Discord Navigation Styles */
