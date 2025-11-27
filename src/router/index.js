@@ -1,14 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Home from '../view/Home.vue';
-import Register from '../view/Register.vue';
-import Login from '../view/Login.vue';
-
+import Register from '../views/Register.vue';
+import Login from '../views/Login.vue';
+import Callback from '../views/Callback.vue';
 
 const routes = [
     {
         path: '/',
-        name: 'Home',
-        component: Home
+        redirect: '/login'
     },
     {
         path: '/Register',
@@ -23,22 +21,22 @@ const routes = [
     {
         path: '/forgot-password',
         name: 'ForgotPassword',
-        component: () => import('../view/ForgotPassword.vue')
+        component: () => import('../views/ForgotPassword.vue')
     },
     {
         path: '/reset-password',
         name: 'ResetPassword',
-        component: () => import('../view/ResetPassword.vue')
+        component: () => import('../views/ResetPassword.vue')
     },
     {
         path: '/message',
         name: 'Message',
-        component: () => import('../view/Message.vue')
+        component: () => import('../views/Message.vue')
     },
     {
         path: '/friends',
         name: 'Friends',
-        component: () => import('../view/Friends.vue'),
+        component: () => import('../views/Friends.vue'),
         beforeEnter: (to, from, next) => {
             // This is a simple route guard. It checks for the auth token.
             if (localStorage.getItem('authToken')) {
@@ -47,6 +45,11 @@ const routes = [
                 next('/login'); // User is not authenticated, redirect to login.
             }
         }
+    },
+    {
+        path: '/auth/callback',
+        name: 'Callback',
+        component: Callback
     }
 ]
 

@@ -2,7 +2,6 @@
   <div id="app">
     <header class="discord-header">
       <nav class="discord-nav">
-        <router-link to="/" class="nav-link">Home</router-link>
         <router-link v-if="auth.isAuthenticated" to="/message" class="nav-link">Messages</router-link>
 
         <router-link v-if="auth.isAuthenticated" to="/friends" class="nav-link">Friends</router-link>
@@ -42,16 +41,21 @@ export default {
     toggleDropdown() {
       this.isDropdownOpen = !this.isDropdownOpen;
     },
-    handleLogout() {
-      // Close dropdown
-      this.isDropdownOpen = false;
-      
-      // Remove token and update auth state
-      localStorage.removeItem('authToken');
-      setAuthState(false);
-      
-      // Force page refresh and redirect to login
-      window.location.href = '/login';
+    async handleLogout() {
+      try {
+        // Close dropdown
+        this.isDropdownOpen = false;
+        
+        // Call the logout function which will handle the API call and cleanup
+        await logoutUser();
+        
+        // The backend will handle the redirect to Google OAuth
+        // No need for manual redirect here as it's handled by the backend response
+      } catch (error) {
+        console.error('Logout error:', error);
+        // Even if there's an error, we still want to redirect to login
+        window.location.href = '/login';
+      }
     }
   },
   mounted() {

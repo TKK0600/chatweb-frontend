@@ -52,11 +52,11 @@
           <!-- Chat Header -->
           <div class="chat-header">
             <h3>{{ selectedConversation.friendName }}#{{ selectedConversation.friendTag }}</h3>
-            <div class="header-actions">
+            <!-- <div class="header-actions">
               <button class="icon-btn" @click="refreshMessages" title="Refresh">
                 🔄
               </button>
-            </div>
+            </div> -->
           </div>
 
           <!-- Messages Container -->

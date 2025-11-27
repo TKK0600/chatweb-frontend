@@ -4,7 +4,11 @@ const API_BASE_URL = 'http://localhost:8080/api';
 
 // Create a reusable Axios instance with a base URL
 const apiClient = axios.create({
-  baseURL: API_BASE_URL
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: false,
 });
 
 // Add a request interceptor to attach the JWT token to every request
@@ -23,29 +27,61 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Response interceptor for handling errors
+apiClient.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response) {
+      // Handle different status codes
+      if (error.response.status === 401) {
+        console.error('Unauthorized access - please log in');
+        // You might want to redirect to login page or show a message
+      } else if (error.response.status === 403) {
+        console.error('Forbidden - you do not have permission');
+      } else if (error.response.status >= 500) {
+        console.error('Server error - please try again later');
+      }
+    } else if (error.request) {
+      console.error('No response from server - please check your connection');
+    } else {
+      console.error('Request error:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
+
 // A helper function for consistent error handling
 const handleApiError = (error) => {
-    throw error.response ? error.response.data : error.message;
+  throw error.response ? error.response.data : error.message;
 };
 
 // User Authentication Functions
 export function registerUser(userData) {
-  return apiClient.post('/register', userData)
+  return apiClient.post('/auth/register', userData)
     .then(response => response.data)
     .catch(handleApiError);
 }
 
 export function loginUser(credentials) {
-  return apiClient.post('/login', credentials)
+  return apiClient.post('/auth/login', credentials)
     .then(response => response.data)
     .catch(handleApiError);
 }
 
-export function logoutUser() {
-  // Remove the token from storage
-  localStorage.removeItem('authToken');
-  // Update the global state to logged out
-  setAuthState(false);
+export async function logoutUser() {
+  try {
+    // Call the backend logout endpoint
+    await apiClient.get('/auth/logout');
+    // The backend will handle the redirect to Google OAuth
+  } catch (error) {
+    console.error('Logout failed:', error);
+    // Even if the API call fails, we should still clear the local state
+  } finally {
+    // Remove the token from storage
+    localStorage.removeItem('authToken');
+    // Update the global state to logged out
+    setAuthState(false);
+  }
 }
 
 export function forgotPassword(email) {
@@ -80,10 +116,12 @@ export function respondToFriendRequest(requestId, action) {
 }
 
 export function getFriends() {
-  // This function calls the new endpoint you created in the controller
-  return apiClient.get('/friends/friend-list')
-    .then(res => res.data)
-    .catch(handleApiError);
+    const token = localStorage.getItem('authToken');
+    console.log('Sending token with request:', token); // <— debug
+    // This function calls the new endpoint you created in the controller
+    return apiClient.get('/friends/friend-list')
+      .then(res => res.data)
+      .catch(handleApiError);
 }
 
 // Chat Functions

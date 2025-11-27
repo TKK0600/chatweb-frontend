@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import Register from '@/view/Register.vue';
+import Register from '@/views/Register.vue';
 
 export default {
   name: 'App',
