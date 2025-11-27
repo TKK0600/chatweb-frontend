@@ -50,7 +50,7 @@
         </div>
       </form>
     </div>
-  </div>sadwa
+  </div>
 </template>
 
 <script>
