@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import { initializeAuth } from './utils/auth'
+import { initializeAuth } from './api/auth'
 import './utils/main.css'
 
 const app = createApp(App);

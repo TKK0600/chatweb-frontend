@@ -28,7 +28,7 @@
 </template>
 
 <script>
-import { authState, setAuthState } from '@/utils/auth';
+import { authState, setAuthState } from '@/api/auth';
 
 export default {
   data() {

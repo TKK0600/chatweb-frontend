@@ -49,16 +49,33 @@
               <span class="username">{{ friend.name }}</span>
               <span class="usertag">#{{ friend.tag }}</span>
             </div>
+            <div class="action-buttons">
+              <button class="icon-button delete" @click.stop="openDeleteDialog(friend)" title="Remove Friend">
+                ✕
+              </button>
+            </div>
           </li>
           <li v-if="!allFriends.length" class="empty-state">You don't have any friends yet. Wumpus is sad.</li>
         </ul>
+
+        <!-- Delete Confirmation Dialog -->
+        <div v-if="showDeleteDialog" class="dialog-overlay">
+          <div class="dialog">
+            <h3>Remove Friend</h3>
+            <p>Are you sure you want to remove <strong>{{ selectedFriend ? selectedFriend.name : '' }}</strong> from your friends?</p>
+            <div class="dialog-buttons">
+              <button class="dialog-button cancel" @click="closeDeleteDialog">Cancel</button>
+              <button class="dialog-button delete" @click="confirmDelete">Remove</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { getFriendRequests, sendFriendRequest, respondToFriendRequest, getFriends } from '@/utils/api';
+import { getFriendRequests, sendFriendRequest, respondToFriendRequest, getFriends, deleteFriend } from '@/api/friends';
 
 export default {
   name: 'Friends',
@@ -71,6 +88,8 @@ export default {
       isError: false,
       pendingRequests: [],
       allFriends: [],
+      showDeleteDialog: false,
+      selectedFriend: null,
     };
   },
   async mounted() {
@@ -97,6 +116,7 @@ export default {
     async fetchAllFriends() {
       try {
         this.allFriends = await getFriends();
+        console.log(this.allFriends);
       } catch (error) {
         console.error('Failed to fetch friends list:', error);
       }
@@ -144,6 +164,53 @@ export default {
       } catch (error) {
         console.error(`Failed to ${action.toLowerCase()} request:`, error);
         alert('There was an error responding to the request.');
+      }
+    },
+
+    // Opens the delete confirmation dialog
+    openDeleteDialog(friend) {
+      this.selectedFriend = friend;
+      this.showDeleteDialog = true;
+    },
+
+    // Closes the delete confirmation dialog
+    closeDeleteDialog() {
+      this.showDeleteDialog = false;
+      this.selectedFriend = null;
+    },
+
+    // Confirms and handles friend removal
+    confirmDelete() {
+      if (this.selectedFriend) {
+        this.handleDeleteFriend(this.selectedFriend.id);
+        this.closeDeleteDialog();
+      }
+    },
+
+    // Handles the actual friend deletion
+    async handleDeleteFriend(friendId) {
+      try {
+        const currentUserId = localStorage.getItem('authToken'); // Assuming you store user ID in localStorage
+        if (!currentUserId) {
+          throw new Error('User not authenticated');
+        }
+        
+        console.log('Deleting friend with IDs:', { currentUserId, friendId });
+        await deleteFriend(currentUserId, friendId);
+        
+        // Remove the friend from the local list
+        this.allFriends = this.allFriends.filter(friend => friend.id !== friendId);
+        
+        // Show success message
+        this.requestStatusMessage = 'Friend removed successfully';
+        this.isError = false;
+      } catch (error) {
+        console.error('Failed to remove friend:', error);
+        this.requestStatusMessage = 'Failed to remove friend. Please try again.';
+        if (error.response?.data?.message) {
+          this.requestStatusMessage = error.response.data.message;
+        }
+        this.isError = true;
       }
     }
   }
@@ -266,43 +333,120 @@ export default {
 
 .action-buttons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .icon-button {
-  width: 36px;
-  height: 36px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: none;
-  cursor: pointer;
-  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.17s ease;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  opacity: 0.7;
 }
 
-.icon-button.accept {
-  background: #3ba55d;
-  color: #ffffff;
+.icon-button:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
-.icon-button.accept:hover {
-  background: #2d7d46;
+.accept {
+  background-color: #3ba55c;
+  color: white;
 }
 
-.icon-button.decline {
-  background: #ed4245;
-  color: #ffffff;
+.decline, .delete {
+  background-color: #ed4245;
+  color: white;
 }
 
-.icon-button.decline:hover {
-  background: #c03639;
+.accept:hover {
+  background-color: #2d7d46;
+}
+
+.decline:hover, .delete:hover {
+  background-color: #a12d2f;
 }
 
 .empty-state {
   text-align: center;
   padding: 40px;
   color: #72767d;
+}
+
+/* Dialog Styles */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: #36393f;
+  border-radius: 8px;
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  color: #dcddde;
+}
+
+.dialog h3 {
+  margin: 0 0 16px 0;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.dialog p {
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.dialog-button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 3px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.17s ease, color 0.17s ease;
+}
+
+.dialog-button.cancel {
+  background: transparent;
+  color: #b9bbbe;
+}
+
+.dialog-button.cancel:hover {
+  text-decoration: underline;
+}
+
+.dialog-button.delete {
+  background: #ed4245;
+  color: white;
+}
+
+.dialog-button.delete:hover {
+  background: #a12d2f;
 }
 </style>

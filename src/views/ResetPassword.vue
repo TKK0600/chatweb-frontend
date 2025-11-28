@@ -33,7 +33,7 @@
 </template>
 
 <script>
-import { resetPassword } from '@/utils/api'
+import { resetPassword } from '@/api/auth'
 
 export default {
     name: 'ResetPassword',

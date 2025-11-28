@@ -54,8 +54,8 @@
 </template>
 
 <script>
-import { loginUser } from '@/utils/api';
-import { setAuthState } from '@/utils/auth';
+import { loginUser } from '@/api/auth';
+import { setAuthState } from '@/api/auth';
 
 export default {
   name: 'Login',

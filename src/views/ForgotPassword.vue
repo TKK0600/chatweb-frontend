@@ -20,7 +20,7 @@
 </template>
 
 <script>
-import { forgotPassword } from '@/utils/api'
+import { forgotPassword } from '@/api/auth'
 
 export default {
     name: 'ForgotPassword',

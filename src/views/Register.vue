@@ -55,8 +55,7 @@
 </template>
 
 <script>
-import { registerUser, loginUser } from '@/utils/api';
-import { setAuthState } from '@/utils/auth';
+import { registerUser, loginUser, setAuthState } from '@/api/auth';
 
 export default {
   name: 'Register',

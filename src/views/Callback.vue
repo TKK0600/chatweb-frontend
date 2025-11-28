@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import { setAuthState } from '@/utils/auth';
+import { setAuthState } from '@/api/auth';
 
 export default {
   name: 'Callback',

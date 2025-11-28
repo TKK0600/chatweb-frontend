@@ -76,6 +76,17 @@
                 <div class="message-text">{{ message.content }}</div>
                 <div class="message-footer" v-if="message.senderId === currentUserId">
                   <span class="own-time">{{ formatTime(message.timestamp) }}</span>
+                  <span class="message-status" :class="'status-' + (message.status || 'SENT').toLowerCase()">
+                    <template v-if="message.status === 'READ'">
+                      <span class="tick">✓✓</span>
+                    </template>
+                    <template v-else-if="message.status === 'DELIVERED'">
+                      <span class="tick">✓✓</span>
+                    </template>
+                    <template v-else>
+                      <span class="tick">✓</span>
+                    </template>
+                  </span>
                 </div>
               </div>
             </div>
@@ -116,7 +127,7 @@
 <script>
 import SockJS from "sockjs-client";
 import { Stomp } from "@stomp/stompjs";
-import { getFriends } from '@/utils/api';
+import { getFriends } from '@/api/friends';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -619,6 +630,30 @@ export default {
   color: rgba(255, 255, 255, 0.8);
   font-size: 10px;
   text-align: right;
+}
+
+.message-status {
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.message-status .tick {
+  font-size: 0.8em;
+  line-height: 1;
+  letter-spacing: -0.1em;
+}
+
+.message-status.status-sent .tick {
+  color: #a3a6aa;
+}
+
+.message-status.status-delivered .tick {
+  color: #a3a6aa;
+}
+
+.message-status.status-read .tick {
+  color: #4a90e2;
 }
 
 .message-input-container {
